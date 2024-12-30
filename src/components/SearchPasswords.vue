@@ -17,12 +17,15 @@
             <td>{{ password.name }}</td>
             <td>{{ password.login_id }}</td>
             <td>
-            {{ visiblePasswordId === password.id ? password.password : '*******' }}
+                {{ visiblePasswordIds[password.id] ? password.password : '*******' }}
             </td>
             <td>{{ password.url || '-' }}</td>
             <td>
-              <button @click="showPassword(password)">表示</button>
-              <button @click="copyPassword(password)">コピー</button>
+                <button @click="showPassword(password)">
+                    {{ visiblePasswordIds[password.id] ? '隠す' : '表示' }}
+                </button>
+                <button @click="copyPassword(password)">コピー</button>
+                <button @click="editPassword(password)">編集</button>
             </td>
           </tr>
         </tbody>
@@ -32,11 +35,13 @@
   <script setup lang="ts">
   import { ref, computed, onMounted } from 'vue'
   import { invoke } from '@tauri-apps/api/core'
-  
+  import { useRouter } from 'vue-router'
+
+  const router = useRouter()
   const passwords = ref([])
   const searchQuery = ref('')
-  const visiblePasswordId = ref<number | null>(null)
-  
+  const visiblePasswordIds = ref<{ [key: number]: boolean }>({})
+
   const filteredPasswords = computed(() => {
     return passwords.value.filter(password => 
       password.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -45,21 +50,21 @@
   })
   
   const showPassword = (password: any) => {
-    if (visiblePasswordId.value === password.id) {
-      visiblePasswordId.value = null
-    } else {
-      visiblePasswordId.value = password.id
-    }
+    visiblePasswordIds.value[password.id] = !visiblePasswordIds.value[password.id]
   }
   
   const copyPassword = async (password: any) => {
     await navigator.clipboard.writeText(password.password)
   }
   
+  const editPassword = (password: any) => {
+    router.push(`/edit/${password.id}`)
+  }
+
   const loadPasswords = async () => {
     passwords.value = await invoke('get_passwords')
   }
-  
+
   onMounted(() => {
     loadPasswords()
   })
